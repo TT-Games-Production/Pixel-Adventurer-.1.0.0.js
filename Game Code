@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adventure Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #111;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #gameUI {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      color: white;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      z-index: 2;
+    }
+    #gameUI > div {
+      margin: 0 10px;
+    }
+    .menu {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 3;
+    }
+    .menu button {
+      background: #555;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .menu button:hover {
+      background: #888;
+    }
+    #terminal {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 10px;
+      font-size: 14px;
+      z-index: 3;
+      display: none;
+    }
+    #terminal input {
+      width: 90%;
+      padding: 5px;
+      margin-right: 5px;
+      background: #333;
+      color: white;
+      border: none;
+    }
+    #terminal button {
+      padding: 5px 10px;
+      background: #555;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Game UI -->
+  <div id="gameUI">
+    <div id="health">Health: 100</div>
+    <div id="armor">Armor: 50</div>
+    <div id="magic">Magic: 30</div>
+    <div id="score">Score: 0</div>
+  </div>
+
+  <div id="terminal">
+    <input type="text" id="command" placeholder="Enter command (e.g., spawnEnemy, healPlayer)">
+    <button onclick="executeCommand()">Run</button>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Resize canvas
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    // Game variables
+    const player = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      width: 40,
+      height: 40,
+      color: "blue",
+      speed: 5,
+      health: 100,
+      armor: 50,
+      magic: 30,
+      score: 0,
+      dx: 0,
+      dy: 0,
+    };
+
+    const enemies = [];
+    const particles = [];
+    let developerMode = false;
+
+    // Key states
+    const keys = { w: false, a: false, s: false, d: false, Space: false };
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "w") keys.w = true;
+      if (e.key === "a") keys.a = true;
+      if (e.key === "s") keys.s = true;
+      if (e.key === "d") keys.d = true;
+      if (e.key === " ") keys.Space = true;
+      if (e.key === "`") toggleDeveloperMode();
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "w") keys.w = false;
+      if (e.key === "a") keys.a = false;
+      if (e.key === "s") keys.s = false;
+      if (e.key === "d") keys.d = false;
+      if (e.key === " ") keys.Space = false;
+    });
+
+    // Update player movement
+    function handlePlayerInput() {
+      player.dx = 0;
+      player.dy = 0;
+      if (keys.w) player.dy = -player.speed;
+      if (keys.s) player.dy = player.speed;
+      if (keys.a) player.dx = -player.speed;
+      if (keys.d) player.dx = player.speed;
+    }
+
+    function updatePlayer() {
+      player.x += player.dx;
+      player.y += player.dy;
+
+      // Prevent player from moving off-screen
+      player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+      player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+    }
+
+    // Spawn enemies
+    function spawnEnemy() {
+      const size = Math.random() * 30 + 20;
+      const x = Math.random() < 0.5 ? 0 : canvas.width - size;
+      const y = Math.random() * canvas.height;
+
+      enemies.push({
+        x,
+        y,
+        width: size,
+        height: size,
+        color: "red",
+        speed: Math.random() * 2 + 1,
+        dx: 0,
+        dy: 0,
+      });
+    }
+
+    // Update enemies
+    function updateEnemies() {
+      for (const enemy of enemies) {
+        const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        enemy.dx = Math.cos(angle) * enemy.speed;
+        enemy.dy = Math.sin(angle) * enemy.speed;
+
+        enemy.x += enemy.dx;
+        enemy.y += enemy.dy;
+
+        if (
+          player.x < enemy.x + enemy.width &&
+          player.x + player.width > enemy.x &&
+          player.y < enemy.y + enemy.height &&
+          player.y + player.height > enemy.y
+        ) {
+          player.health -= 1;
+          if (player.health <= 0) {
+            alert("Game Over!");
+            document.location.reload();
+          }
+        }
+      }
+    }
+
+    // Developer mode
+    function toggleDeveloperMode() {
+      const password = prompt("Enter developer mode password:");
+      if (password === "0504") {
+        developerMode = !developerMode;
+        document.getElementById("terminal").style.display = developerMode
+          ? "block"
+          : "none";
+        alert(
+          developerMode ? "Developer mode activated!" : "Developer mode deactivated!"
+        );
+      } else {
+        alert("Incorrect password!");
+      }
+    }
+
+    function executeCommand() {
+      const command = document.getElementById("command").value.trim();
+      switch (command) {
+        case "spawnEnemy":
+          spawnEnemy();
+          break;
+        case "healPlayer":
+          player.health = Math.min(100, player.health + 20);
+          break;
+        case "addScore":
+          player.score += 10;
+          break;
+        case "grantMagic":
+          player.magic += 10;
+          break;
+        default:
+          alert("Unknown command!");
+      }
+      document.getElementById("command").value = "";
+    }
+
+    // Game loop
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      handlePlayerInput();
+      updatePlayer();
+      updateEnemies();
+
+      drawPlayer();
+      drawEnemies();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
