@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adventure Game</title>
+</head>
+<body>
+  <h1>Welcome to Adventure Game</h1>
+  <p>Play the game or download it to play offline!</p>
+
+  <!-- Playable Game -->
+  <div id="game">
+    <button id="startGame">Start Game</button>
+  </div>
+
+  <!-- Download Link -->
+  <a href="MyGame.zip" download>Download Game</a>
+
+  <script>
+    // Example game logic
+    document.getElementById('startGame').addEventListener('click', () => {
+      alert('Game Started!');
+    });
+  </script>
+</body>
+</html>
